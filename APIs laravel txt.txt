@@ -1,0 +1,138 @@
+Como realizar pagamentos por m-pesa no laravel
+
+Para realizar pagamentos por e-mail e M-Pesa no Laravel, você precisa integrar um gateway de pagamento que suporte esses métodos de pagamento. Aqui está um exemplo básico de como você pode realizar essa integração usando os gateways de pagamento PayPal (para pagamentos por e-mail) e Safaricom M-Pesa (para pagamentos móveis):
+
+1. Instale as bibliotecas necessárias via Composer:
+
+```
+composer require paypal/rest-api-sdk-php
+composer require safaricom/mpesa
+```
+
+2. Configure as credenciais do PayPal e do Safaricom M-Pesa no arquivo `.env`:
+
+```
+PAYPAL_CLIENT_ID=seu_client_id
+PAYPAL_SECRET=seu_client_secret
+MPESA_CONSUMER_KEY=sua_consumer_key
+MPESA_CONSUMER_SECRET=sua_consumer_secret
+```
+
+3. Crie uma rota para processar o pagamento por e-mail:
+
+```php
+use PayPal\Rest\ApiContext;
+use PayPal\Auth\OAuthTokenCredential;
+use PayPal\Api\Payer;
+use PayPal\Api\Amount;
+use PayPal\Api\Transaction;
+use PayPal\Api\RedirectUrls;
+use PayPal\Api\Payment;
+
+Route::post('/pagamento-email', function () {
+    $apiContext = new ApiContext(
+        new OAuthTokenCredential(config('app.paypal_client_id'), config('app.paypal_secret'))
+    );
+
+    $payer = new Payer();
+    $payer->setPaymentMethod('paypal');
+
+    $amount = new Amount();
+    $amount->setTotal(10.00); // Valor do pagamento
+    $amount->setCurrency('USD'); // Moeda do pagamento
+
+    $transaction = new Transaction();
+    $transaction->setAmount($amount);
+
+    $redirectUrls = new RedirectUrls();
+    $redirectUrls->setReturnUrl(route('pagamento.email.confirmado'));
+    $redirectUrls->setCancelUrl(route('pagamento.email.cancelado'));
+
+    $payment = new Payment();
+    $payment->setIntent('sale')
+        ->setPayer($payer)
+        ->setTransactions([$transaction])
+        ->setRedirectUrls($redirectUrls);
+
+    try {
+        $payment->create($apiContext);
+        return redirect($payment->getApprovalLink());
+    } catch (\Exception $e) {
+        // Tratar erros de pagamento
+        return redirect()->back()->withErrors(['message' => 'Erro ao processar o pagamento.']);
+    }
+})->name('pagamento.email');
+```
+
+4. Crie as rotas para processar as respostas de confirmação e cancelamento do pagamento por e-mail:
+
+```php
+Route::get('/pagamento-email-confirmado', function () {
+    // Lógica para tratar o pagamento confirmado
+})->name('pagamento.email.confirmado');
+
+Route::get('/pagamento-email-cancelado', function () {
+    // Lógica para tratar o pagamento cancelado
+})->name('pagamento.email.cancelado');
+```
+
+5. Crie uma rota para processar o pagamento móvel M-Pesa:
+
+```php
+use Safaricom\Mpesa\Mpesa;
+
+Route::post('/pagamento-mpesa', function () {
+    $mpesa = new Mpesa();
+
+    $response = $mpesa->c2b([
+        'amount' => 10.00, // Valor do pagamento
+        'phone_number' => 'seu_numero_telefone',
+        'account_reference' => 'referencia_da_conta',
+        'transaction_description' => 'descricao_da_transacao'
+    ]);
+
+    if ($response['ResponseCode'] == '0') {
+        // Pagamento iniciado com sucesso
+    } else {
+        // Tratar erros de pagamento
+    }
+})->name('pagamento.mpesa');
+```
+
+Esses são apenas exemplos básicos de como realizar pagamentos por e-mail e M-Pesa no Laravel. Lembre-se de consultar a documentação oficial do PayPal e do Safaricom M-Pesa para obter mais informações sobre a integração, autenticação e manipulação de pagamentos.
+
+ Como obter as credenciais do safaricom M-pesa?
+
+Para obter as credenciais do Safaricom M-Pesa, siga estes passos:
+
+1. Acesse o Portal de Desenvolvedores da Safaricom em https://developer.safaricom.co.ke/.
+
+2. Clique em "My Apps" no menu superior e faça login com suas credenciais.
+
+3. Selecione a opção "Create App" para criar um novo aplicativo.
+
+4. Preencha as informações solicitadas, como nome do aplicativo, descrição e categoria.
+
+5. Na seção "Sandbox Credentials", você encontrará as seguintes informações:
+   - Consumer Key: É a chave do consumidor para autenticar as chamadas de API.
+   - Consumer Secret: É o segredo do consumidor para autenticar as chamadas de API.
+
+6. Anote essas credenciais em um local seguro.
+
+Lembre-se de que, para usar as credenciais no seu aplicativo Laravel, você precisará configurá-las no arquivo `.env`:
+
+```
+MPESA_CONSUMER_KEY=sua_consumer_key
+MPESA_CONSUMER_SECRET=sua_consumer_secret
+```
+
+Certifique-se de substituir "sua_consumer_key" e "sua_consumer_secret" pelas credenciais corretas fornecidas pelo Safaricom M-Pesa.
+
+Essas etapas podem variar ligeiramente dependendo das atualizações do Portal de Desenvolvedores da Safaricom, portanto, é recomendável consultar a documentação oficial ou entrar em contato diretamente com o suporte da Safaricom se encontrar alguma dificuldade durante o processo de obtenção das credenciais do M-Pesa.
+
+Como realizar pagamentos por conta móvel no laravel
+
+ Para realizar pagamentos por conta móvel no Laravel, você precisará integrar um gateway de pagamento que ofereça suporte a esse método, como o M-Pesa. Existem várias bibliotecas e pacotes disponíveis para facilitar essa integração, como o "laravel-mpesa" ou "laravel-daraja". Recomendo pesquisar e seguir a documentação dessas bibliotecas para realizar a integração corretamente.
+
+ Laravel-mpesa
+ O pacote "laravel-mpesa" é uma biblioteca popular para integração do M-Pesa com o Laravel. Você pode encontrar mais informações e instruções de uso no repositório oficial do GitHub: https://github.com/safaricom/mpesa-php-sdk. Certifique-se de seguir a documentação fornecida para realizar a integração corretamente.
